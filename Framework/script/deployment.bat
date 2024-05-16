@@ -1,15 +1,6 @@
 @echo off
 setlocal
 
-rem verifier si aucun argument n'est fourni
-if "%~1" == "" (
-    echo Veuillez spécifier le chemin vers le répertoire webapps de Tomcat.
-    exit /b
-)
-
-rem recuperation du chemin de webapps
-set webappFolder="%~1"
-
 rem Extraire le nom du dossier root à partir du chemin du dossier source
 for %%I in (".") do set "projet_name=%%~nxI"
 
@@ -20,6 +11,7 @@ set src=.\Framework\src
 set bin=.\Framework\bin
 set script=.\Framework\script
 set test=.\Test
+set webappFolder=C:\Program Files\Apache Software Foundation\Tomcat 10.1\webapps
 
 rem création du dossier temp
 if exist "%temp%" (
@@ -44,6 +36,7 @@ cd /D ..\..\
 rem Copie des élements indispensables pour tomcat vers temp
 xcopy "%test%\" "%temp%\WEB-INF\"
 xcopy /E /I /Y "%lib%\" "%temp%\WEB-INF\lib"
+xcopy /E /I /Y "%bin%\" "%temp%\WEB-INF\classes"
 
 rem Déplacement vers temp
 cd /D "%temp%"
