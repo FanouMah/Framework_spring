@@ -1,11 +1,9 @@
 package mg.prom16;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.List;
-
+import java.io.*;
+import java.lang.reflect.Method;
+import java.util.*;
+import Annotations.*;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,9 +12,10 @@ import jakarta.servlet.http.HttpServletResponse;
 
 public class FrontController extends HttpServlet {
 
-    protected List<String> list_controller = new ArrayList<>();
+    protected List<Class<?>> list_controller = new ArrayList<>();
+    protected Map<String, Mapping> urlMappings = new HashMap<>();
 
-    public void getControllerList(String package_name) throws ClassNotFoundException {
+    protected void getControllerList(String package_name) throws ClassNotFoundException {
         String bin_path = "WEB-INF/classes/" + package_name.replace(".", "/");
 
         bin_path = getServletContext().getRealPath(bin_path);
@@ -28,8 +27,18 @@ public class FrontController extends HttpServlet {
         for (File onefile : b.listFiles()) {
             if (onefile.isFile() && onefile.getName().endsWith(".class")) {
                 Class<?> clazz = Class.forName(package_name + "." + onefile.getName().split(".class")[0]);
-                if (clazz.isAnnotationPresent(Annotations.Controller.class))
-                list_controller.add(clazz.getName());
+                if (clazz.isAnnotationPresent(Controller.class))
+                
+                list_controller.add(clazz);
+
+                for (Method method : clazz.getMethods()) {
+                    if (method.isAnnotationPresent(Get.class)) {
+                        Mapping mapping = new Mapping(clazz.getName(), method.getName());
+                        // String key = "/"+clazz.getSimpleName()+"/"+method.getName();   
+                        String key = method.getAnnotation(Get.class).value();                     
+                        urlMappings.put(key, mapping);
+                    }
+                }
             }
         }
     }
@@ -37,27 +46,30 @@ public class FrontController extends HttpServlet {
     @Override
     public void init() throws ServletException {
         super.init();
-    }
-
-    protected void processRequest(jakarta.servlet.http.HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        response.setContentType("text/html;charset=UTF-8");
-
         try {
             getControllerList(getServletContext().getInitParameter("controllerPackage"));
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
+    }
 
+    protected void processRequest(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        response.setContentType("text/html;charset=UTF-8");
+
+        String url = request.getRequestURI().substring(request.getContextPath().length());
+        
         try (PrintWriter out = response.getWriter()) {
-            //out.println(request.getRequestURL().toString());
-            // or out.println(request.getRequestURI());
 
-            out.println("<ul>");
-            for (String controller : list_controller) {
-                out.println("<li>"+controller+"</li>");
+            Mapping mapping = urlMappings.get(url);
+
+            if (mapping != null) {
+                out.println("URL : " + url +"</br>");
+                out.println("Assosier a : " + mapping);
+            } else {
+                out.println("Pas de methode Get associer a l'URL: " + url);
             }
-            out.println("<ul>");
+
         }
     }
 
