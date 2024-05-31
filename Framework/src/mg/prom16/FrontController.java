@@ -1,6 +1,7 @@
 package mg.prom16;
 
 import java.io.*;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
 import Annotations.*;
@@ -43,6 +44,21 @@ public class FrontController extends HttpServlet {
         }
     }
 
+    protected Object invoke_Method(String className, String methodName) {
+        Object returnValue = null;
+        try {
+            Class<?> clazz = Class.forName(className);
+            Method method = clazz.getDeclaredMethod(methodName);
+            method.setAccessible(true);
+            Object instance = clazz.getDeclaredConstructor().newInstance();
+            returnValue = method.invoke(instance);
+        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
+                | NoSuchMethodException | SecurityException e) {
+            e.printStackTrace();
+        }
+        return returnValue;
+    }
+
     @Override
     public void init() throws ServletException {
         super.init();
@@ -64,8 +80,9 @@ public class FrontController extends HttpServlet {
             Mapping mapping = urlMappings.get(url);
 
             if (mapping != null) {
-                out.println("URL : " + url +"</br>");
-                out.println("Assosier a : " + mapping);
+                out.println("<p><strong>URL :</strong> " + url +"</p>");
+                out.println("<p><strong>Assosier a :</strong> " + mapping+"</p>");
+                out.println("<p>Contenue de la methode <strong>"+mapping.getMethodName()+"</strong> : "+invoke_Method(mapping.getClassName(), mapping.getMethodName())+"</p>");
             } else {
                 out.println("Pas de methode Get associer a l'URL: " + url);
             }
