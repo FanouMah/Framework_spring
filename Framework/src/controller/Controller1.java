@@ -1,17 +1,27 @@
 package controller;
 
 import Annotations.*;
+import mg.prom16.ModelView;
 
 @Controller
 public class Controller1 {
 
-    @Get(value = "/Controller1/method1")
+    @Get(value = "/hello")
     public String method1() {
-        return "Contenue de ma method1";
+        return "hello world";
     }
 
-    @Get
-    public void method2() { }
+    @Get(value = "/pageNotFound")
+    public ModelView method2() { 
+        ModelView modelView = new ModelView();
+        modelView.setUrl("/views/ErrorPage.jsp");
+        modelView.addObject("message", "Page Not Found");
+        modelView.addObject("code", 404);
+        return modelView;
+    }
 
-    public void method3() { }
+    @Get(value = "/date")
+    public java.util.Date method3() {
+        return new java.util.Date();
+    }
 }

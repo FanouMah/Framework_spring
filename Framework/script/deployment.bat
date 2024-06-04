@@ -11,6 +11,7 @@ set src=.\Framework\src
 set bin=.\Framework\bin
 set script=.\Framework\script
 set test=.\Test
+set views=.\Test\views
 set webappFolder=C:\Program Files\Apache Software Foundation\Tomcat 10.1\webapps
 
 rem création du dossier temp
@@ -35,6 +36,7 @@ cd /D ..\..\
 
 rem Copie des élements indispensables pour tomcat vers temp
 xcopy "%test%\" "%temp%\WEB-INF\"
+xcopy /E /I /Y "%views%\" "%temp%\views"
 xcopy /E /I /Y "%lib%\" "%temp%\WEB-INF\lib"
 xcopy /E /I /Y "%bin%\" "%temp%\WEB-INF\classes"
 
