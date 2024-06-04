@@ -5,6 +5,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
 import Annotations.*;
+import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -80,9 +81,29 @@ public class FrontController extends HttpServlet {
             Mapping mapping = urlMappings.get(url);
 
             if (mapping != null) {
-                out.println("<p><strong>URL :</strong> " + url +"</p>");
-                out.println("<p><strong>Assosier a :</strong> " + mapping+"</p>");
-                out.println("<p>Contenue de la methode <strong>"+mapping.getMethodName()+"</strong> : "+invoke_Method(mapping.getClassName(), mapping.getMethodName())+"</p>");
+                // out.println("<p><strong>URL :</strong> " + url +"</p>");
+                // out.println("<p><strong>Assosier a :</strong> " + mapping+"</p>");
+                //out.println("<p>Contenue de la methode <strong>"+mapping.getMethodName()+"</strong> : "+invoke_Method(mapping.getClassName(), mapping.getMethodName())+"</p>");
+
+                Object returnValue = invoke_Method(mapping.getClassName(), mapping.getMethodName());
+
+                if (returnValue instanceof String) {
+                    out.println("<p>Contenue de la methode <strong>"+mapping.getMethodName()+"</strong> : "+(String) returnValue+"</p>");
+                } else if (returnValue instanceof ModelView) {
+                    ModelView modelView = (ModelView) returnValue;
+                    String viewUrl = modelView.getUrl();
+                    HashMap<String, Object> data = modelView.getData();
+
+                    for (Map.Entry<String, Object> entry : data.entrySet()) {
+                        request.setAttribute(entry.getKey(), entry.getValue());
+                    }
+
+                    RequestDispatcher dispatcher = request.getRequestDispatcher(viewUrl);
+                    dispatcher.forward(request, response);
+                    
+                } else {
+                    out.println("Type de retour non reconnu");
+                }
             } else {
                 out.println("Pas de methode Get associer a l'URL: " + url);
             }
