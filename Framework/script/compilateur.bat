@@ -31,6 +31,6 @@ for %%I in ("%lib%\*.jar") do (
 )
 
 rem Compiler tous les fichiers Java en une seule commande avec les bibliothèques nécessaires
-javac -cp "%classpath%" -d "%bin%" !javaFiles!
+javac -cp "%classpath%" -parameters -d "%bin%" !javaFiles!
 
 endlocal
