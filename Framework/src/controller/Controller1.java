@@ -2,6 +2,7 @@ package controller;
 
 import Annotations.*;
 import mg.prom16.ModelView;
+import models.Employe;
 
 @Controller
 public class Controller1 {
@@ -25,13 +26,21 @@ public class Controller1 {
         return new java.util.Date();
     }
 
+    // @Get(value = "/employe")
+    // public ModelView get_employe(@Param(name = "id")String id, @Param(name = "nom")String nom, @Param(name = "prenom")String prenom){
+    //     ModelView mv = new ModelView();
+    //     mv.setUrl("/views/Employe.jsp");
+    //     mv.addObject("id", id);
+    //     mv.addObject("nom", nom);
+    //     mv.addObject("prenom", prenom);
+    //     return mv;
+    // }
+
     @Get(value = "/employe")
-    public ModelView get_employe(@Param(name = "id")String id, @Param(name = "nom")String nom, @Param(name = "prenom")String prenom){
+    public ModelView get_employe(@RequestBody Employe employe) {
         ModelView mv = new ModelView();
         mv.setUrl("/views/Employe.jsp");
-        mv.addObject("id", id);
-        mv.addObject("nom", nom);
-        mv.addObject("prenom", prenom);
+        mv.addObject("employe", employe);
         return mv;
     }
 }

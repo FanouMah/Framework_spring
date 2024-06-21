@@ -1,6 +1,7 @@
 package mg.prom16;
 
 import java.io.*;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -11,6 +12,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+// import com.thoughtworks.paranamer.AdaptiveParanamer;
+// import com.thoughtworks.paranamer.Paranamer;
 
 
 public class FrontController extends HttpServlet {
@@ -56,25 +59,45 @@ public class FrontController extends HttpServlet {
         try {
             Class<?> clazz = Class.forName(className);
             method.setAccessible(true);
-
+    
             Parameter[] methodParams = method.getParameters();
             Object[] args = new Object[methodParams.length];
-
+    
             Enumeration<String> params = request.getParameterNames();
             Map<String, String> paramMap = new HashMap<>();
 
+            // Paranamer paranamer = new AdaptiveParanamer();
+            // String[] parameterMethodNames = paranamer.lookupParameterNames(method);
+    
             while (params.hasMoreElements()) {
                 String paramName = params.nextElement();
                 paramMap.put(paramName, request.getParameter(paramName));
             }
+    
             for (int i = 0; i < methodParams.length; i++) {
-                methodParams[i].getName();
-                if (methodParams[i].isAnnotationPresent(Param.class)) {
+                if (methodParams[i].isAnnotationPresent(RequestBody.class)) {
+                    Class<?> paramType = methodParams[i].getType();
+                    Object paramObject = paramType.getDeclaredConstructor().newInstance();
+                    for (Field field : paramType.getDeclaredFields()) {
+                        String paramName = field.isAnnotationPresent(FormParam.class) ? field.getAnnotation(FormParam.class).value() : field.getName();
+                        if (paramMap.containsKey(paramName)) {
+                            field.setAccessible(true);
+                            field.set(paramObject, paramMap.get(paramName));
+                        }
+                    }
+                    args[i] = paramObject;
+                } else if (methodParams[i].isAnnotationPresent(Param.class)) {
                     String paramName = methodParams[i].getAnnotation(Param.class).name();
                     String paramValue = paramMap.get(paramName);
                     args[i] = paramValue;
-                }
-                else{
+                } else {
+                    
+                    // if (paramMap.containsKey(parameterMethodNames[i])) {
+                    //     args[i] = paramMap.get(parameterMethodNames[i]);
+                    // } else {
+                    //     args[i] = null;
+                    // }
+                    
                     if (paramMap.containsKey(methodParams[i].getName())) {
                         args[i] = paramMap.get(methodParams[i].getName());
                     } else {
@@ -82,7 +105,7 @@ public class FrontController extends HttpServlet {
                     }
                 }
             }
-            
+    
             Object instance = clazz.getDeclaredConstructor().newInstance();
             returnValue = method.invoke(instance, args);
             
@@ -92,7 +115,7 @@ public class FrontController extends HttpServlet {
         }
         return returnValue;
     }
-
+    
     @Override
     public void init() throws ServletException {
         super.init();
