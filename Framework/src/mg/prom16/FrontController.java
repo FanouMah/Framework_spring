@@ -12,6 +12,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+// import com.thoughtworks.paranamer.AdaptiveParanamer;
+// import com.thoughtworks.paranamer.Paranamer;
 
 
 public class FrontController extends HttpServlet {
@@ -63,6 +65,9 @@ public class FrontController extends HttpServlet {
     
             Enumeration<String> params = request.getParameterNames();
             Map<String, String> paramMap = new HashMap<>();
+
+            // Paranamer paranamer = new AdaptiveParanamer();
+            // String[] parameterMethodNames = paranamer.lookupParameterNames(method);
     
             while (params.hasMoreElements()) {
                 String paramName = params.nextElement();
@@ -86,6 +91,13 @@ public class FrontController extends HttpServlet {
                     String paramValue = paramMap.get(paramName);
                     args[i] = paramValue;
                 } else {
+                    
+                    // if (paramMap.containsKey(parameterMethodNames[i])) {
+                    //     args[i] = paramMap.get(parameterMethodNames[i]);
+                    // } else {
+                    //     args[i] = null;
+                    // }
+                    
                     if (paramMap.containsKey(methodParams[i].getName())) {
                         args[i] = paramMap.get(methodParams[i].getName());
                     } else {

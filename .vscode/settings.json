@@ -4,6 +4,7 @@
     ],
     "java.project.outputPath": "Framework\\bin",
     "java.project.referencedLibraries": [
-        "Framework\\lib\\servlet-api.jar"
+        "Framework\\lib\\servlet-api.jar",
+        "Framework\\lib\\paranamer.jar"
     ]
 }
