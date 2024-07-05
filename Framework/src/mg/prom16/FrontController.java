@@ -12,9 +12,9 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 // import com.thoughtworks.paranamer.AdaptiveParanamer;
 // import com.thoughtworks.paranamer.Paranamer;
-
 
 public class FrontController extends HttpServlet {
 
@@ -23,19 +23,15 @@ public class FrontController extends HttpServlet {
 
     protected void getControllerList(String package_name) throws ServletException, ClassNotFoundException {
         String bin_path = "WEB-INF/classes/" + package_name.replace(".", "/");
-
         bin_path = getServletContext().getRealPath(bin_path);
-
         File b = new File(bin_path);
-
         list_controller.clear();
         
         for (File onefile : b.listFiles()) {
             if (onefile.isFile() && onefile.getName().endsWith(".class")) {
                 Class<?> clazz = Class.forName(package_name + "." + onefile.getName().split(".class")[0]);
                 if (clazz.isAnnotationPresent(Controller.class))
-                
-                list_controller.add(clazz);
+                    list_controller.add(clazz);
 
                 for (Method method : clazz.getMethods()) {
                     if (method.isAnnotationPresent(Get.class)) {
@@ -44,8 +40,7 @@ public class FrontController extends HttpServlet {
                         String key = method.getAnnotation(Get.class).value();  
                         if (urlMappings.containsKey(key)) {
                             throw new ServletException("La methode '"+urlMappings.get(key).getMethod().getName()+"' possede deja l'URL '"+key+"' comme annotation, donc elle ne peux pas etre assigner a la methode '"+mapping.getMethod().getName()+"'");
-                        }                   
-                        else{
+                        } else {
                             urlMappings.put(key, mapping);
                         }
                     }
@@ -75,7 +70,11 @@ public class FrontController extends HttpServlet {
             }
     
             for (int i = 0; i < methodParams.length; i++) {
-                if (methodParams[i].isAnnotationPresent(RequestBody.class)) {
+                if (methodParams[i].getType().equals(MySession.class)) {
+                    HttpSession session = request.getSession();
+                    MySession mySession = new MySession(session);
+                    args[i] = mySession;
+                } else if (methodParams[i].isAnnotationPresent(RequestBody.class)) {
                     Class<?> paramType = methodParams[i].getType();
                     Object paramObject = paramType.getDeclaredConstructor().newInstance();
                     for (Field field : paramType.getDeclaredFields()) {
@@ -91,13 +90,13 @@ public class FrontController extends HttpServlet {
                     String paramValue = paramMap.get(paramName);
                     args[i] = paramValue;
                 } else {
-                    
+
                     // if (paramMap.containsKey(parameterMethodNames[i])) {
                     //     args[i] = paramMap.get(parameterMethodNames[i]);
                     // } else {
                     //     args[i] = null;
                     // }
-                    
+
                     if (paramMap.containsKey(methodParams[i].getName())) {
                         args[i] = paramMap.get(methodParams[i].getName());
                     } else {
@@ -148,15 +147,22 @@ public class FrontController extends HttpServlet {
             try {
                 Object returnValue = invoke_Method(request, mapping.getClassName(), mapping.getMethod());
                 if (returnValue instanceof String) {
-                    try (PrintWriter out = response.getWriter()) {
-                        out.println("<p>Contenue de la methode <strong>"+mapping.method_to_string()+"</strong> : "+(String) returnValue+"</p>");
+                    if (((String) returnValue).startsWith("redirect")) {
+                        String redirectUrl = ((String) returnValue).split(":")[1];
+                        
+                        RequestDispatcher dispatcher = request.getRequestDispatcher(redirectUrl);
+                        dispatcher.forward(request, response);
+                    }
+                    else{
+                        try (PrintWriter out = response.getWriter()) {
+                            out.println("<p>Contenue de la methode <strong>"+mapping.method_to_string()+"</strong> : "+(String) returnValue+"</p>");
+                        }
                     }
                 } else if (returnValue instanceof ModelView) {
                     ModelView modelView = (ModelView) returnValue;
                     String viewUrl = modelView.getUrl();
                     HashMap<String, Object> data = modelView.getData();
     
-
                     for (Map.Entry<String, Object> entry : data.entrySet()) {
                         request.setAttribute(entry.getKey(), entry.getValue());
                     }
@@ -164,19 +170,15 @@ public class FrontController extends HttpServlet {
                     RequestDispatcher dispatcher = request.getRequestDispatcher(viewUrl);
                     dispatcher.forward(request, response);
                     
-                } 
-                else if (returnValue == null) {
+                } else if (returnValue == null) {
                     throw new ServletException("La methode \""+mapping.method_to_string()+"\" retourne une valeur NULL");
-
-                }
-                else {
+                } else {
                     throw new ServletException("Le type de retour de l'objet \""+returnValue.getClass().getName()+"\" n'est pas pris en charge par le Framework");
                 }
     
             } catch (NoSuchMethodException | IOException e) {
                 throw new ServletException("Erreur lors de l'invocation de la methode \""+mapping.method_to_string()+"\"", null);
             }
-
         } else {
             throw new ServletException("Pas de methode Get associer a l'URL: \"" + url +"\"");
         }
@@ -193,5 +195,4 @@ public class FrontController extends HttpServlet {
             throws ServletException, IOException {
         processRequest(request, response);
     }
-
 }
