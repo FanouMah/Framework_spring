@@ -1,5 +1,7 @@
 package controller;
 
+import java.util.Vector;
+
 import Annotations.*;
 import mg.prom16.ModelView;
 import models.Employe;
@@ -42,5 +44,46 @@ public class Controller1 {
         mv.setUrl("/views/Employe.jsp");
         mv.addObject("employe", employe);
         return mv;
+    }
+
+    @Restapi
+    @Get(value = "/listemploye")
+    public ModelView list_employe() {
+        ModelView mv = new ModelView();
+        // mv.setUrl("/views/ListEmploye.jsp");
+
+        Employe employe1 = new Employe();
+        employe1.setId("1");
+        employe1.setNom("RABIARIMAHATRA");
+        employe1.setPrenom("Lucas");
+
+        Employe employe2 = new Employe();
+        employe2.setId("2");
+        employe2.setNom("MAHAFALIARIMBOLA");
+        employe2.setPrenom("Fanomezantsoa");
+
+        Employe employe3 = new Employe();
+        employe3.setId("1");
+        employe3.setNom("HAJARISON");
+        employe3.setPrenom("Mickael");
+        
+        Vector<Employe> listEmploye = new Vector<>();
+        listEmploye.add(employe1);
+        listEmploye.add(employe2);
+        listEmploye.add(employe3);
+
+        mv.addObject("listemploye", listEmploye);
+        return mv;
+    }
+
+    @Restapi
+    @Get(value = "/fanou")
+    public Employe get_Employe(){
+        Employe employe2 = new Employe();
+        employe2.setId("2");
+        employe2.setNom("MAHAFALIARIMBOLA");
+        employe2.setPrenom("Fanomezantsoa");
+
+        return employe2;
     }
 }

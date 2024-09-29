@@ -5,6 +5,7 @@
     "java.project.outputPath": "Framework\\bin",
     "java.project.referencedLibraries": [
         "Framework\\lib\\servlet-api.jar",
-        "Framework\\lib\\paranamer.jar"
+        "Framework\\lib\\paranamer.jar",
+        "Framework\\lib\\gson-2.11.0.jar"
     ]
 }

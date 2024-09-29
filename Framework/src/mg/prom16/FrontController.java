@@ -13,6 +13,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import com.google.gson.Gson;
 // import com.thoughtworks.paranamer.AdaptiveParanamer;
 // import com.thoughtworks.paranamer.Paranamer;
 
@@ -133,8 +134,6 @@ public class FrontController extends HttpServlet {
 
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        response.setContentType("text/html;charset=UTF-8");
-
         String url = request.getRequestURI().substring(request.getContextPath().length());
         
         Mapping mapping = urlMappings.get(url);
@@ -146,34 +145,54 @@ public class FrontController extends HttpServlet {
             
             try {
                 Object returnValue = invoke_Method(request, mapping.getClassName(), mapping.getMethod());
-                if (returnValue instanceof String) {
-                    if (((String) returnValue).startsWith("redirect")) {
-                        String redirectUrl = ((String) returnValue).split(":")[1];
-                        
-                        RequestDispatcher dispatcher = request.getRequestDispatcher(redirectUrl);
-                        dispatcher.forward(request, response);
-                    }
-                    else{
-                        try (PrintWriter out = response.getWriter()) {
-                            out.println("<p>Contenue de la methode <strong>"+mapping.method_to_string()+"</strong> : "+(String) returnValue+"</p>");
-                        }
-                    }
-                } else if (returnValue instanceof ModelView) {
-                    ModelView modelView = (ModelView) returnValue;
-                    String viewUrl = modelView.getUrl();
-                    HashMap<String, Object> data = modelView.getData();
-    
-                    for (Map.Entry<String, Object> entry : data.entrySet()) {
-                        request.setAttribute(entry.getKey(), entry.getValue());
-                    }
-    
-                    RequestDispatcher dispatcher = request.getRequestDispatcher(viewUrl);
-                    dispatcher.forward(request, response);
+                Gson gson = new Gson();
+                if (mapping.getMethod().isAnnotationPresent(Restapi.class)) {
+                    response.setContentType("application/json");
+                    try (PrintWriter out = response.getWriter()) {
+                        if (returnValue instanceof ModelView) {
+                            ModelView modelView = (ModelView) returnValue;
+                            HashMap<String, Object> data = modelView.getData();
                     
-                } else if (returnValue == null) {
-                    throw new ServletException("La methode \""+mapping.method_to_string()+"\" retourne une valeur NULL");
-                } else {
-                    throw new ServletException("Le type de retour de l'objet \""+returnValue.getClass().getName()+"\" n'est pas pris en charge par le Framework");
+                            String jsonData = gson.toJson(data);
+                    
+                            out.print(jsonData);
+                        } else {
+                            String jsonData = gson.toJson(returnValue);
+                            out.print(jsonData);
+                        }
+                    }                    
+                }
+                else {
+                    response.setContentType("text/html;charset=UTF-8");
+                    if (returnValue instanceof String) {
+                        // if (((String) returnValue).startsWith("redirect")) {
+                        //     String redirectUrl = ((String) returnValue).split(":")[1];
+                            
+                        //     RequestDispatcher dispatcher = request.getRequestDispatcher(redirectUrl);
+                        //     dispatcher.forward(request, response);
+                        // }
+                        // else{
+                            try (PrintWriter out = response.getWriter()) {
+                                out.println("<p>Contenue de la methode <strong>"+mapping.method_to_string()+"</strong> : "+(String) returnValue+"</p>");
+                            }
+                        // }
+                    } else if (returnValue instanceof ModelView) {
+                        ModelView modelView = (ModelView) returnValue;
+                        String viewUrl = modelView.getUrl();
+                        HashMap<String, Object> data = modelView.getData();
+        
+                        for (Map.Entry<String, Object> entry : data.entrySet()) {
+                            request.setAttribute(entry.getKey(), entry.getValue());
+                        }
+        
+                        RequestDispatcher dispatcher = request.getRequestDispatcher(viewUrl);
+                        dispatcher.forward(request, response);
+                        
+                    } else if (returnValue == null) {
+                        throw new ServletException("La methode \""+mapping.method_to_string()+"\" retourne une valeur NULL");
+                    } else {
+                        throw new ServletException("Le type de retour de l'objet \""+returnValue.getClass().getName()+"\" n'est pas pris en charge par le Framework");
+                    }
                 }
     
             } catch (NoSuchMethodException | IOException e) {
