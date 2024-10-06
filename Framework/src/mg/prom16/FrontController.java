@@ -35,15 +35,26 @@ public class FrontController extends HttpServlet {
                     list_controller.add(clazz);
 
                 for (Method method : clazz.getMethods()) {
+                    String url = null;
+                    String verb = null;
+    
                     if (method.isAnnotationPresent(Get.class)) {
-                        Mapping mapping = new Mapping(clazz.getName(), method);
-                        // String key = "/"+clazz.getSimpleName()+"/"+method.getName();   
-                        String key = method.getAnnotation(Get.class).value();  
-                        if (urlMappings.containsKey(key)) {
-                            throw new ServletException("La methode '"+urlMappings.get(key).getMethod().getName()+"' possede deja l'URL '"+key+"' comme annotation, donc elle ne peux pas etre assigner a la methode '"+mapping.getMethod().getName()+"'");
-                        } else {
-                            urlMappings.put(key, mapping);
-                        }
+                        url = method.getAnnotation(Get.class).value();
+                        verb = "GET";
+                    } else if (method.isAnnotationPresent(Post.class)) {
+                        url = method.getAnnotation(Post.class).value();
+                        verb = "POST";
+                    } else {
+                        continue;
+                    }
+    
+                    if (urlMappings.containsKey(url) && !urlMappings.get(url).getVerb().equals(verb)) {
+                        throw new ServletException("La méthode '" + urlMappings.get(url).getMethod().getName() + 
+                            "' avec URL '" + url + "' est déjà utilisée pour la méthode " + 
+                            urlMappings.get(url).getVerb() + ". Conflit avec la méthode '" + 
+                            method.getName() + "' avec URL '" + url + "' pour le verbe '" + verb + "'.");
+                    } else {
+                        urlMappings.put(url, new Mapping(clazz.getName(), method, verb));
                     }
                 }
             }
@@ -137,8 +148,9 @@ public class FrontController extends HttpServlet {
         String url = request.getRequestURI().substring(request.getContextPath().length());
         
         Mapping mapping = urlMappings.get(url);
+        String verb = request.getMethod();
 
-        if (mapping != null) {
+        if (mapping != null && mapping.getVerb().toUpperCase().equals(verb.toUpperCase())) {
             // out.println("<p><strong>URL :</strong> " + url +"</p>");
             // out.println("<p><strong>Assosier a :</strong> " + mapping+"</p>");
             //out.println("<p>Contenue de la methode <strong>"+mapping.getMethodName()+"</strong> : "+invoke_Method(mapping.getClassName(), mapping.getMethodName())+"</p>");
@@ -199,7 +211,7 @@ public class FrontController extends HttpServlet {
                 throw new ServletException("Erreur lors de l'invocation de la methode \""+mapping.method_to_string()+"\"", null);
             }
         } else {
-            throw new ServletException("Pas de methode Get associer a l'URL: \"" + url +"\"");
+            throw new ServletException("Pas de méthode associée à l'URL: \"" + url + "\" pour la méthode HTTP: " + verb);
         }
     }
 

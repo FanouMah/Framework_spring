@@ -8,10 +8,12 @@ import java.lang.reflect.Parameter;
 public class Mapping {
     private String className;
     private Method method;
+    private String verb;
 
-    public Mapping(String className, Method method) {
+    public Mapping(String className, Method method, String verb) {
         this.className = className;
         this.method = method;
+        this.verb = verb;
     }
 
     public String getClassName() {
@@ -22,11 +24,16 @@ public class Mapping {
         return method;
     }
 
+    public String getVerb() {
+        return verb;
+    }
+
     @Override
     public String toString() {
         return "Mapping{" +
                 "className='" + className + '\'' +
                 ", methodName='" + method.getName() + '\'' +
+                ", verbe='"+ verb + '\'' +
                 '}';
     }
 
@@ -51,4 +58,3 @@ public class Mapping {
         return methodString.toString();
     }
 }
-
