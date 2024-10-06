@@ -11,7 +11,7 @@ import Annotations.*;
 @Controller
 public class UserController {
 
-    @Get("/login")
+    @Post("/login")
     public ModelView login(MySession mySession, @Param(name = "username") String username, @Param(name = "password") String password) {
         if ("admin".equals(username) && "admin".equals(password)) {
             mySession.add("username", username);
