@@ -9,12 +9,14 @@ import models.Employe;
 @Controller
 public class Controller1 {
 
-    @Get(value = "/message")
+    @Get
+    @Url(value = "/message")
     public String get_message(String message) {
         return message;
     }
 
-    @Get(value = "/pageNotFound")
+    @Get
+    @Url(value = "/pageNotFound")
     public ModelView pageNotFound() { 
         ModelView modelView = new ModelView();
         modelView.setUrl("/views/ErrorPage.jsp");
@@ -23,7 +25,8 @@ public class Controller1 {
         return modelView;
     }
 
-    @Get(value = "/date")
+    @Get
+    @Url(value = "/date")
     public java.util.Date get_Date() {
         return new java.util.Date();
     }
@@ -38,7 +41,9 @@ public class Controller1 {
     //     return mv;
     // }
 
-    @Get(value = "/employe")
+
+    @Get
+    @Url(value = "/employe")
     public ModelView get_employe(@RequestBody Employe employe) {
         ModelView mv = new ModelView();
         mv.setUrl("/views/Employe.jsp");
@@ -47,7 +52,8 @@ public class Controller1 {
     }
 
     @Restapi
-    @Get(value = "/listemploye")
+    @Get
+    @Url(value = "/listemploye")
     public ModelView list_employe() {
         ModelView mv = new ModelView();
         // mv.setUrl("/views/ListEmploye.jsp");
@@ -77,7 +83,7 @@ public class Controller1 {
     }
 
     @Restapi
-    @Get(value = "/fanou")
+    @Url(value = "/fanou")
     public Employe get_Employe(){
         Employe employe2 = new Employe();
         employe2.setId("2");

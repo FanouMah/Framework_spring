@@ -11,7 +11,9 @@ import Annotations.*;
 @Controller
 public class UserController {
 
-    @Post("/login")
+    @Post
+    @Get
+    @Url("/login")
     public ModelView login(MySession mySession, @Param(name = "username") String username, @Param(name = "password") String password) {
         if ("admin".equals(username) && "admin".equals(password)) {
             mySession.add("username", username);
@@ -46,7 +48,8 @@ public class UserController {
     //     return "redirect:/views/Login.jsp";
     // }
 
-    @Get("/logout")
+    @Get
+    @Url("/logout")
     public ModelView logout(MySession mySession) {
         mySession.delete("username");
         mySession.delete("userData");
