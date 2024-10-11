@@ -228,21 +228,21 @@ public class FrontController extends HttpServlet {
                             dispatcher.forward(request, response);
                             
                         } else if (returnValue == null) {
-                            throw new ServletException("La methode \""+verb.method_to_string()+"\" retourne une valeur NULL");
+                            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,"La methode \""+verb.method_to_string()+"\" retourne une valeur NULL");
                         } else {
-                            throw new ServletException("Le type de retour de l'objet \""+returnValue.getClass().getName()+"\" n'est pas pris en charge par le Framework");
+                            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,"Le type de retour de l'objet \""+returnValue.getClass().getName()+"\" n'est pas pris en charge par le Framework");
                         }
                     }
         
                 } catch (NoSuchMethodException | IOException e) {
-                    throw new ServletException("Erreur lors de l'invocation de la methode \""+verb.method_to_string()+"\"", null);
+                    response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,"Erreur lors de l'invocation de la methode \""+verb.method_to_string()+"\"");
                 }
             } else {
-                throw new ServletException("Auccune methode HTTP " + request.getMethod() + " pour l'URL " + url);
+                response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED,"Auccune methode HTTP " + request.getMethod() + " pour l'URL " + url);
             }
             
         } else {
-            throw new ServletException("Pas de methode associee a l'URL: \"" + url + "\" pour la methode HTTP: " + request.getMethod());
+            response.sendError(HttpServletResponse.SC_NOT_FOUND,"Pas de methode associee a l'URL: \"" + url + "\" pour la methode HTTP: " + request.getMethod());
         }
     }
 
