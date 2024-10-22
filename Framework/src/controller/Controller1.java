@@ -1,9 +1,17 @@
 package controller;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Vector;
 
 import Annotations.*;
+import jakarta.servlet.http.Part;
 import mg.prom16.ModelView;
+import mg.prom16.MySession;
 import models.Employe;
 
 @Controller
@@ -91,5 +99,15 @@ public class Controller1 {
         employe2.setPrenom("Fanomezantsoa");
 
         return employe2;
+    }
+
+    @Post
+    @Url("/uploadImage")
+    public ModelView uploadImage(MySession mySession, @FileParam("imageFile") String imageFilePath) throws IOException {
+
+        ModelView modelView = new ModelView();
+        modelView.setUrl("/views/uploadSuccess.jsp");
+        modelView.addObject("fileName", imageFilePath);
+        return modelView;
     }
 }
