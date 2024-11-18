@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import Annotations.*;
+import Annotations.validation.*;
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;
@@ -18,6 +19,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.Part;
+import java.text.DateFormat;  
+import java.text.SimpleDateFormat;  
 
 import com.google.gson.Gson;
 // import com.thoughtworks.paranamer.AdaptiveParanamer;
@@ -91,9 +94,44 @@ public class FrontController extends HttpServlet {
         }
     }
     
+    private void validateField(Field field, String fieldValue, String paramName, List<Map<String, String>> errors) {
+        if (field.isAnnotationPresent(Required.class) && (fieldValue == null || fieldValue.isEmpty())) {
+            Map<String, String> error = new HashMap<>();
+            error.put("champ", paramName);
+            error.put("message", field.getAnnotation(Required.class).message());
+            errors.add(error);
+        } else if (field.isAnnotationPresent(TypeNumber.class) && fieldValue != null) {
+            try {
+                if (!fieldValue.equals("")) {
+                    Double.valueOf(fieldValue.toString());
+                }
+            } catch (NumberFormatException e) {
+                Map<String, String> error = new HashMap<>();
+                error.put("champ", paramName);
+                error.put("message", field.getAnnotation(TypeNumber.class).message());
+                errors.add(error);
+            }
+        } else if (field.isAnnotationPresent(TypeDate.class) && fieldValue != null ) {
+            DateFormat dateFormat = new SimpleDateFormat(field.getAnnotation(TypeDate.class).pattern());
+            dateFormat.setLenient(false);
+            try {
+                if (!fieldValue.equals("")) {
+                    dateFormat.parse(fieldValue);
+                }
+            } catch (Exception e) {
+                Map<String, String> error = new HashMap<>();
+                error.put("champ", paramName);
+                error.put("message", field.getAnnotation(TypeDate.class).message());
+                errors.add(error);
+            }
+        }
+        
+    }
 
-    protected Object invoke_Method(HttpServletRequest request, Mapping mapping) throws IOException, NoSuchMethodException, ServletException {
+
+    protected Object invoke_Method(HttpServletRequest request, HttpServletResponse response, Mapping mapping) throws IOException, NoSuchMethodException, ServletException {
         Object returnValue = null;
+        List<Map<String, String>> validationErrors = new ArrayList<>();
         try {
             Verb verb = mapping.getByAction(request.getMethod());
             Class<?> clazz = Class.forName(verb.getClassName());
@@ -124,10 +162,14 @@ public class FrontController extends HttpServlet {
                     Object paramObject = paramType.getDeclaredConstructor().newInstance();
                     for (Field field : paramType.getDeclaredFields()) {
                         String paramName = field.isAnnotationPresent(FormParam.class) ? field.getAnnotation(FormParam.class).value() : field.getName();
-                        if (paramMap.containsKey(paramName)) {
+                        // if (paramMap.containsKey(paramName)) {
                             field.setAccessible(true);
-                            field.set(paramObject, paramMap.get(paramName));
-                        }
+                            // String fieldValue = paramMap.get(paramName);
+                            String fieldValue = request.getParameter(paramName);;
+                            field.set(paramObject, fieldValue);
+
+                            validateField(field, fieldValue, paramName, validationErrors);
+                        // }
                     }
                     args[i] = paramObject;
                 } else if (methodParams[i].isAnnotationPresent(Param.class)) {
@@ -139,16 +181,16 @@ public class FrontController extends HttpServlet {
                     Part part = request.getPart(partName);
             
                     String fileName = part.getSubmittedFileName();
-                    String uploadDir = getServletContext().getRealPath("/uploads/");
+                    String uploadDir = getServletContext().getRealPath("") + File.separator + "uploads";
                     File uploadDirFile = new File(uploadDir);
                     
                     if (!uploadDirFile.exists()) {
                         uploadDirFile.mkdirs();
                     }
 
-                    Path filePath = Paths.get(uploadDir, fileName);
+                    File file = new File(uploadDir, fileName);
                     try (InputStream fileContent = part.getInputStream()) {
-                        Files.copy(fileContent, filePath);
+                        Files.copy(fileContent, file.toPath());
                     }
 
                     String relativeFilePath = "uploads/" + fileName;
@@ -166,6 +208,16 @@ public class FrontController extends HttpServlet {
                     } else {
                         args[i] = null;
                     }
+                }
+            }
+
+            if (!validationErrors.isEmpty()) {
+                response.setContentType("application/json");
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                try (PrintWriter out = response.getWriter()) {
+                    Gson gson = new Gson();
+                    String jsonErrors = gson.toJson(validationErrors);
+                    out.print(jsonErrors);
                 }
             }
     
@@ -209,7 +261,7 @@ public class FrontController extends HttpServlet {
                 //out.println("<p>Contenue de la methode <strong>"+mapping.getMethodName()+"</strong> : "+invoke_Method(mapping.getClassName(), mapping.getMethodName())+"</p>");
                 
                 try {
-                    Object returnValue = invoke_Method(request, mapping);
+                    Object returnValue = invoke_Method(request, response, mapping);
                     Gson gson = new Gson();
                     if (verb.getMethod().isAnnotationPresent(Restapi.class)) {
                         response.setContentType("application/json");
