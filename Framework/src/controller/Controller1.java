@@ -1,6 +1,7 @@
 package controller;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.Vector;
 
 import Annotations.*;
@@ -47,6 +48,7 @@ public class Controller1 {
     @Get
     @Url(value = "/employe")
     public ModelView get_employe(@RequestBody Employe employe) {
+        employe.setDateEmbauche(LocalDate.now().toString());
         ModelView mv = new ModelView();
         mv.setUrl("/views/Employe.jsp");
         mv.addObject("employe", employe);

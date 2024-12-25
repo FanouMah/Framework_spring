@@ -17,7 +17,7 @@ public class Employe {
     private String nom;
 
     @TypeDate(message = "La date d'embauche doit être au format 'yyyy-MM-dd'.")
-    @FormParam("date-embauche")
+    @FormParam("date_embauche")
     private String dateEmbauche;
     
     @FormParam("prenom")
@@ -43,5 +43,11 @@ public class Employe {
     }
     public void setPrenom(String prenom) {
         this.prenom = prenom;
+    }
+    public void setDateEmbauche(String dateEmbauche) {
+        this.dateEmbauche = dateEmbauche;
+    }
+    public String getDateEmbauche() {
+        return dateEmbauche;
     }
 }
