@@ -5,9 +5,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.net.URL;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 import Annotations.*;
 import Annotations.validation.*;
@@ -94,22 +93,16 @@ public class FrontController extends HttpServlet {
         }
     }
     
-    private void validateField(Field field, String fieldValue, String paramName, List<Map<String, String>> errors) {
+    private void validateField(Field field, String fieldValue, String paramName, Map<String, String> errors) {
         if (field.isAnnotationPresent(Required.class) && (fieldValue == null || fieldValue.isEmpty())) {
-            Map<String, String> error = new HashMap<>();
-            error.put("champ", paramName);
-            error.put("message", field.getAnnotation(Required.class).message());
-            errors.add(error);
+            errors.put(paramName, field.getAnnotation(Required.class).message());
         } else if (field.isAnnotationPresent(TypeNumber.class) && fieldValue != null) {
             try {
                 if (!fieldValue.equals("")) {
                     Double.valueOf(fieldValue.toString());
                 }
             } catch (NumberFormatException e) {
-                Map<String, String> error = new HashMap<>();
-                error.put("champ", paramName);
-                error.put("message", field.getAnnotation(TypeNumber.class).message());
-                errors.add(error);
+                errors.put(paramName, field.getAnnotation(TypeNumber.class).message());
             }
         } else if (field.isAnnotationPresent(TypeDate.class) && fieldValue != null ) {
             DateFormat dateFormat = new SimpleDateFormat(field.getAnnotation(TypeDate.class).pattern());
@@ -119,10 +112,7 @@ public class FrontController extends HttpServlet {
                     dateFormat.parse(fieldValue);
                 }
             } catch (Exception e) {
-                Map<String, String> error = new HashMap<>();
-                error.put("champ", paramName);
-                error.put("message", field.getAnnotation(TypeDate.class).message());
-                errors.add(error);
+                errors.put(paramName, field.getAnnotation(TypeDate.class).message());
             }
         }
         
@@ -131,7 +121,7 @@ public class FrontController extends HttpServlet {
 
     protected Object invoke_Method(HttpServletRequest request, HttpServletResponse response, Mapping mapping) throws IOException, NoSuchMethodException, ServletException {
         Object returnValue = null;
-        List<Map<String, String>> validationErrors = new ArrayList<>();
+        Map<String, String> validationErrors = new HashMap<>();
         try {
             Verb verb = mapping.getByAction(request.getMethod());
             Class<?> clazz = Class.forName(verb.getClassName());
@@ -212,12 +202,23 @@ public class FrontController extends HttpServlet {
             }
 
             if (!validationErrors.isEmpty()) {
-                response.setContentType("application/json");
-                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                try (PrintWriter out = response.getWriter()) {
-                    Gson gson = new Gson();
-                    String jsonErrors = gson.toJson(validationErrors);
-                    out.print(jsonErrors);
+                // response.setContentType("application/json");
+                // response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                // try (PrintWriter out = response.getWriter()) {
+                //     Gson gson = new Gson();
+                //     String jsonErrors = gson.toJson(validationErrors);
+                //     out.print(jsonErrors);
+                // }
+
+                String refererUrl = request.getHeader("Referer");
+                if (refererUrl != null) {
+                    String relativePath = refererUrl.substring(refererUrl.indexOf("/views"));
+                    ModelView modelView = new ModelView();
+                    modelView.setUrl(relativePath); 
+                    modelView.setValidationErrors(validationErrors);
+                    return modelView;
+                } else {
+                    response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,"Aucune URL de référence disponible.");
                 }
             }
     
@@ -229,6 +230,32 @@ public class FrontController extends HttpServlet {
             e.printStackTrace();
         }
         return returnValue;
+    }
+
+    protected void readFile( HttpServletResponse response, String url) throws FileNotFoundException, IOException {
+        if (url.startsWith("/uploads/")) {
+            String uploadPath = getServletContext().getRealPath("") + File.separator + "uploads";
+            String filePath = uploadPath + File.separator + url.substring("/uploads/".length());
+    
+            File file = new File(filePath);
+            if (file.exists() && file.isFile()) {
+                response.setContentType(getServletContext().getMimeType(file.getName()));
+                response.setContentLength((int) file.length());
+    
+                try (FileInputStream fis = new FileInputStream(file);
+                     OutputStream out = response.getOutputStream()) {
+                    byte[] buffer = new byte[4096];
+                    int bytesRead;
+                    while ((bytesRead = fis.read(buffer)) != -1) {
+                        out.write(buffer, 0, bytesRead);
+                    }
+                }
+                return;
+            } else {
+                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Le fichier demandé est introuvable : " + url);
+                return;
+            }
+        }
     }
     
     @Override
@@ -251,6 +278,8 @@ public class FrontController extends HttpServlet {
             throws ServletException, IOException {
         String url = request.getRequestURI().substring(request.getContextPath().length());
         
+        readFile(response, url);
+
         Mapping mapping = urlMappings.get(url);
 
         if (mapping != null) {
@@ -297,6 +326,7 @@ public class FrontController extends HttpServlet {
                             ModelView modelView = (ModelView) returnValue;
                             String viewUrl = modelView.getUrl();
                             HashMap<String, Object> data = modelView.getData();
+                            request.setAttribute("validationErrors", modelView.getValidationErrors());
             
                             for (Map.Entry<String, Object> entry : data.entrySet()) {
                                 request.setAttribute(entry.getKey(), entry.getValue());
