@@ -5,6 +5,8 @@ import java.time.LocalDate;
 import java.util.Vector;
 
 import Annotations.*;
+import Annotations.security.Authenticated;
+import Annotations.security.Public;
 import mg.prom16.ModelView;
 import mg.prom16.MySession;
 import models.Employe;
@@ -18,6 +20,26 @@ public class Controller1 {
         return message;
     }
 
+
+    @Public
+    @Get
+    @Url("/session/login")
+    public String createSession(MySession mySession) {
+        mySession.add("auth", "");
+        mySession.add("role", "ADMIN");
+        return "connexion done";
+
+    }
+
+    @Authenticated
+    @Get
+    @Url("/session/logout")
+    public String logoutSession(MySession mySession) {
+        mySession.delete("auth");
+        return "deconnexion done";
+    }
+
+    @Authenticated("ADMIN")
     @Get
     @Url(value = "/pageNotFound")
     public ModelView pageNotFound() { 
