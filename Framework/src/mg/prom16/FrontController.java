@@ -9,6 +9,8 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.util.*;
 import Annotations.*;
+import Annotations.security.Authenticated;
+import Annotations.security.Public;
 import Annotations.validation.*;
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.ServletException;
@@ -274,85 +276,86 @@ public class FrontController extends HttpServlet {
         }
     }
 
-    protected void processRequest(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
+    protected void processRequest(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         String url = request.getRequestURI().substring(request.getContextPath().length());
-        
+
         readFile(response, url);
 
         Mapping mapping = urlMappings.get(url);
 
-        if (mapping != null) {
-            if (mapping.getByAction(request.getMethod()) != null) {
-                Verb verb = mapping.getByAction(request.getMethod());
-                // out.println("<p><strong>URL :</strong> " + url +"</p>");
-                // out.println("<p><strong>Assosier a :</strong> " + mapping+"</p>");
-                //out.println("<p>Contenue de la methode <strong>"+mapping.getMethodName()+"</strong> : "+invoke_Method(mapping.getClassName(), mapping.getMethodName())+"</p>");
-                
-                try {
-                    Object returnValue = invoke_Method(request, response, mapping);
-                    Gson gson = new Gson();
-                    if (verb.getMethod().isAnnotationPresent(Restapi.class)) {
-                        response.setContentType("application/json");
-                        try (PrintWriter out = response.getWriter()) {
-                            if (returnValue instanceof ModelView) {
-                                ModelView modelView = (ModelView) returnValue;
-                                HashMap<String, Object> data = modelView.getData();
-                        
-                                String jsonData = gson.toJson(data);
-                        
-                                out.print(jsonData);
-                            } else {
-                                String jsonData = gson.toJson(returnValue);
-                                out.print(jsonData);
-                            }
-                        }                    
+        if (mapping == null) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND, "Aucune méthode associée à l'URL: \"" + url + "\" pour la méthode HTTP: " + request.getMethod());
+            return;
+        }
+
+        Verb verb = mapping.getByAction(request.getMethod());
+        if (verb == null) {
+            response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED, "Aucune méthode HTTP " + request.getMethod() + " pour l'URL " + url);
+            return;
+        }
+
+        HttpSession session = request.getSession(false);
+
+        if (verb.getMethod().isAnnotationPresent(Public.class)) {}
+        else if (verb.getMethod().isAnnotationPresent(Authenticated.class)) {
+            if (session == null || session.getAttribute("auth") == null) {
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Authentification requise pour accéder à l'URL: \"" + url + "\"");
+                return;
+            }
+
+            String roleRequis = verb.getMethod().getAnnotation(Authenticated.class).value();
+            String roleSession = (String) session.getAttribute("role");
+
+            if (!roleRequis.equals("") && !roleRequis.equals(roleSession)) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Accès refusé : privilèges insuffisants pour accéder à cette ressource.");
+                return;
+            }
+        } else {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Accès interdit à l'URL: \"" + url + "\"");
+            return;
+        }
+
+        try {
+            Object returnValue = invoke_Method(request, response, mapping);
+            Gson gson = new Gson();
+
+            if (verb.getMethod().isAnnotationPresent(Restapi.class)) {
+                response.setContentType("application/json");
+                try (PrintWriter out = response.getWriter()) {
+                    if (returnValue instanceof ModelView) {
+                        out.print(gson.toJson(((ModelView) returnValue).getData()));
+                    } else {
+                        out.print(gson.toJson(returnValue));
                     }
-                    else {
-                        response.setContentType("text/html;charset=UTF-8");
-                        if (returnValue instanceof String) {
-                            // if (((String) returnValue).startsWith("redirect")) {
-                            //     String redirectUrl = ((String) returnValue).split(":")[1];
-                                
-                            //     RequestDispatcher dispatcher = request.getRequestDispatcher(redirectUrl);
-                            //     dispatcher.forward(request, response);
-                            // }
-                            // else{
-                                try (PrintWriter out = response.getWriter()) {
-                                    out.println("<p>Contenue de la methode <strong>"+verb.method_to_string()+"</strong> : "+(String) returnValue+"</p>");
-                                }
-                            // }
-                        } else if (returnValue instanceof ModelView) {
-                            ModelView modelView = (ModelView) returnValue;
-                            String viewUrl = modelView.getUrl();
-                            HashMap<String, Object> data = modelView.getData();
-                            request.setAttribute("validationErrors", modelView.getValidationErrors());
-            
-                            for (Map.Entry<String, Object> entry : data.entrySet()) {
-                                request.setAttribute(entry.getKey(), entry.getValue());
-                            }
-            
-                            RequestDispatcher dispatcher = request.getRequestDispatcher(viewUrl);
-                            dispatcher.forward(request, response);
-                            
-                        } else if (returnValue == null) {
-                            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,"La methode \""+verb.method_to_string()+"\" retourne une valeur NULL");
-                        } else {
-                            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,"Le type de retour de l'objet \""+returnValue.getClass().getName()+"\" n'est pas pris en charge par le Framework");
-                        }
-                    }
-        
-                } catch (NoSuchMethodException | IOException e) {
-                    response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,"Erreur lors de l'invocation de la methode \""+verb.method_to_string()+"\"");
                 }
             } else {
-                response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED,"Auccune methode HTTP " + request.getMethod() + " pour l'URL " + url);
+                response.setContentType("text/html;charset=UTF-8");
+
+                if (returnValue instanceof String) {
+                    try (PrintWriter out = response.getWriter()) {
+                        out.println("<p>Contenu de la méthode <strong>" + verb.method_to_string() + "</strong> : " + returnValue + "</p>");
+                    }
+                } else if (returnValue instanceof ModelView) {
+                    ModelView modelView = (ModelView) returnValue;
+                    request.setAttribute("validationErrors", modelView.getValidationErrors());
+
+                    for (Map.Entry<String, Object> entry : modelView.getData().entrySet()) {
+                        request.setAttribute(entry.getKey(), entry.getValue());
+                    }
+
+                    RequestDispatcher dispatcher = request.getRequestDispatcher(modelView.getUrl());
+                    dispatcher.forward(request, response);
+                } else if (returnValue == null) {
+                    response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "La méthode \"" + verb.method_to_string() + "\" a retourné une valeur NULL.");
+                } else {
+                    response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Type de retour non supporté : " + returnValue.getClass().getName());
+                }
             }
-            
-        } else {
-            response.sendError(HttpServletResponse.SC_NOT_FOUND,"Pas de methode associee a l'URL: \"" + url + "\" pour la methode HTTP: " + request.getMethod());
+        } catch (NoSuchMethodException | IOException e) {
+            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Erreur lors de l'invocation de la méthode \"" + verb.method_to_string() + "\" : " + e.getMessage());
         }
     }
+
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
