@@ -5,7 +5,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
-import java.net.URL;
 import java.nio.file.Files;
 import java.util.*;
 import Annotations.*;
@@ -121,7 +120,7 @@ public class FrontController extends HttpServlet {
     }
 
 
-    protected Object invoke_Method(HttpServletRequest request, HttpServletResponse response, Mapping mapping) throws IOException, NoSuchMethodException, ServletException {
+    protected Object invoke_Method(HttpServletRequest request, HttpServletResponse response, HttpSession session, Mapping mapping) throws IOException, NoSuchMethodException, ServletException {
         Object returnValue = null;
         Map<String, String> validationErrors = new HashMap<>();
         try {
@@ -146,7 +145,6 @@ public class FrontController extends HttpServlet {
     
             for (int i = 0; i < methodParams.length; i++) {
                 if (methodParams[i].getType().equals(MySession.class)) {
-                    HttpSession session = request.getSession();
                     MySession mySession = new MySession(session);
                     args[i] = mySession;
                 } else if (methodParams[i].isAnnotationPresent(RequestBody.class)) {
@@ -294,7 +292,7 @@ public class FrontController extends HttpServlet {
             return;
         }
 
-        HttpSession session = request.getSession(false);
+        HttpSession session = request.getSession();
 
         if (verb.getMethod().isAnnotationPresent(Public.class)) {}
         else if (verb.getMethod().isAnnotationPresent(Authenticated.class)) {
@@ -316,7 +314,7 @@ public class FrontController extends HttpServlet {
         }
 
         try {
-            Object returnValue = invoke_Method(request, response, mapping);
+            Object returnValue = invoke_Method(request, response, session, mapping);
             Gson gson = new Gson();
 
             if (verb.getMethod().isAnnotationPresent(Restapi.class)) {
