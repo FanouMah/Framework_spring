@@ -29,7 +29,7 @@ rem Déplacement vers bin
 cd %bin%
 
 rem Compresser bin en un fichier jar
-jar -cvf "..\lib\%projet_name%".jar *
+jar -cvf "..\lib\%projet_name%.jar" Annotations mg
 
 rem Déplacement vers le projet
 cd /D ..\..\

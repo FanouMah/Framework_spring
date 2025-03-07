@@ -8,6 +8,7 @@ import java.lang.reflect.Parameter;
 import java.nio.file.Files;
 import java.util.*;
 import Annotations.*;
+import Annotations.ErrorPath;
 import Annotations.security.Authenticated;
 import Annotations.security.Public;
 import Annotations.validation.*;
@@ -202,23 +203,24 @@ public class FrontController extends HttpServlet {
             }
 
             if (!validationErrors.isEmpty()) {
-                // response.setContentType("application/json");
-                // response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                // try (PrintWriter out = response.getWriter()) {
-                //     Gson gson = new Gson();
-                //     String jsonErrors = gson.toJson(validationErrors);
-                //     out.print(jsonErrors);
-                // }
-
-                String refererUrl = request.getHeader("Referer");
-                if (refererUrl != null) {
-                    String relativePath = refererUrl.substring(refererUrl.indexOf("/views"));
-                    ModelView modelView = new ModelView();
-                    modelView.setUrl(relativePath); 
-                    modelView.setValidationErrors(validationErrors);
-                    return modelView;
+                if (method.isAnnotationPresent(ErrorPath.class)) {
+                    String refererUrl = method.getAnnotation(ErrorPath.class).value();;
+                    if (refererUrl != null) {
+                        ModelView modelView = new ModelView();
+                        modelView.setUrl(refererUrl); 
+                        modelView.setValidationErrors(validationErrors);
+                        return modelView;
+                    } else {
+                        response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,"Aucune URL de référence disponible.");
+                    }
                 } else {
-                    response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,"Aucune URL de référence disponible.");
+                    response.setContentType("application/json");
+                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    try (PrintWriter out = response.getWriter()) {
+                        Gson gson = new Gson();
+                        String jsonErrors = gson.toJson(validationErrors);
+                        out.print(jsonErrors);
+                    }
                 }
             }
     
