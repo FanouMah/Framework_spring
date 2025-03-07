@@ -67,8 +67,10 @@ public class Controller1 {
     // }
 
 
+    @Authenticated("admin")
     @Get
     @Url(value = "/employe")
+    @ErrorPath(value = "/views/FormEmploye.jsp")
     public ModelView get_employe(@RequestBody Employe employe) {
         employe.setDateEmbauche(LocalDate.now().toString());
         ModelView mv = new ModelView();
