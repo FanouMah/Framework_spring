@@ -8,7 +8,6 @@ import java.lang.reflect.Parameter;
 import java.nio.file.Files;
 import java.util.*;
 import Annotations.*;
-import Annotations.ErrorPath;
 import Annotations.security.Authenticated;
 import Annotations.security.Public;
 import Annotations.validation.*;
@@ -295,22 +294,49 @@ public class FrontController extends HttpServlet {
         }
 
         HttpSession session = request.getSession();
+        Method method = verb.getMethod();
+        Class<?> controllerClass;
+        try {
+            controllerClass = Class.forName(verb.getClassName());
+        } catch (ClassNotFoundException e) {
+            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Impossible de charger la classe: " + verb.getClassName());
+            return;
+        }
 
-        if (verb.getMethod().isAnnotationPresent(Public.class)) {}
-        else if (verb.getMethod().isAnnotationPresent(Authenticated.class)) {
+        boolean isClassPublic = controllerClass.isAnnotationPresent(Public.class);
+        boolean isClassAuthenticated = controllerClass.isAnnotationPresent(Authenticated.class);
+        boolean isMethodPublic = method.isAnnotationPresent(Public.class);
+        boolean isMethodAuthenticated = method.isAnnotationPresent(Authenticated.class);
+
+        if (isMethodPublic) {}
+        else if (isMethodAuthenticated) {
             if (session == null || session.getAttribute("auth") == null) {
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Authentification requise pour accéder à l'URL: \"" + url + "\"");
                 return;
             }
 
-            String roleRequis = verb.getMethod().getAnnotation(Authenticated.class).value();
+            String roleRequis = method.getAnnotation(Authenticated.class).value();
             String roleSession = (String) session.getAttribute("role");
 
             if (!roleRequis.equals("") && !roleRequis.equals(roleSession)) {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN, "Accès refusé : privilèges insuffisants pour accéder à cette ressource.");
                 return;
             }
-        } else {
+        } else if (isClassAuthenticated) {
+            if (session == null || session.getAttribute("auth") == null) {
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Authentification requise pour accéder à l'URL: \"" + url + "\"");
+                return;
+            }
+    
+            String requiredRole = controllerClass.getAnnotation(Authenticated.class).value();
+            String sessionRole = (String) session.getAttribute("role");
+    
+            if (!requiredRole.isEmpty() && !requiredRole.equals(sessionRole)) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Accès refusé : privilèges insuffisants pour accéder à cette ressource.");
+                return;
+            }
+        } else if (isClassPublic) { } 
+        else {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Accès interdit à l'URL: \"" + url + "\"");
             return;
         }

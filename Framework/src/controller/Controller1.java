@@ -67,7 +67,7 @@ public class Controller1 {
     // }
 
 
-    @Public
+    @Authenticated("admin")
     @Get
     @Url(value = "/employe")
     @ErrorPath(value = "/views/FormEmploye.jsp")
