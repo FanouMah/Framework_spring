@@ -358,8 +358,15 @@ public class FrontController extends HttpServlet {
                 response.setContentType("text/html;charset=UTF-8");
 
                 if (returnValue instanceof String) {
-                    try (PrintWriter out = response.getWriter()) {
-                        out.println("<p>Contenu de la méthode <strong>" + verb.method_to_string() + "</strong> : " + returnValue + "</p>");
+                    if (((String) returnValue).startsWith("redirect")) {
+                        String redirectUrl = ((String) returnValue).split(":")[1];
+
+                        RequestDispatcher dispatcher = request.getRequestDispatcher(redirectUrl);
+                        dispatcher.forward(request, response);
+                    } else {
+                        try (PrintWriter out = response.getWriter()) {
+                            out.println("<p>Contenu de la méthode <strong>" + verb.method_to_string() + "</strong> : " + returnValue + "</p>");
+                        }
                     }
                 } else if (returnValue instanceof ModelView) {
                     ModelView modelView = (ModelView) returnValue;

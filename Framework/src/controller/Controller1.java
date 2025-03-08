@@ -11,6 +11,7 @@ import mg.prom16.ModelView;
 import mg.prom16.MySession;
 import models.Employe;
 
+@Public
 @Controller
 public class Controller1 {
 
@@ -36,7 +37,7 @@ public class Controller1 {
     @Url("/session/logout")
     public String logoutSession(MySession mySession) {
         mySession.delete("auth");
-        return "deconnexion done";
+        return "redirect:/listemploye";
     }
 
     @Authenticated("ADMIN")
@@ -80,6 +81,7 @@ public class Controller1 {
     }
 
     @Restapi
+    @Post
     @Get
     @Url(value = "/listemploye")
     public ModelView list_employe() {
